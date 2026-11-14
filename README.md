@@ -178,7 +178,7 @@ PLATFORM=android-35 ./scripts/build-manual.sh
 
 ### 构建注意事项
 
-- `local.properties` 里的 `sdk.dir` 是**本机绝对路径**，已加入 `.gitignore`，换机器需自己重新生成
+- **首次克隆后先建 `local.properties`**：`cp local.properties.example local.properties`，把 `sdk.dir` 改成你本机的 Android SDK 路径（或改为设置环境变量 `ANDROID_HOME`）。真实文件已被 `.gitignore` 忽略，不会提交
 - `release` 构建类型当前复用 **debug 签名**（`signingConfig = debug`），仅供侧载，不可上架
 - 工程若放在网络盘（NAS/SMB）上，Gradle 构建会因大量小文件 I/O 明显变慢，建议先复制到本机磁盘再编
 
@@ -229,7 +229,8 @@ tv-guard/
 ├── build.gradle.kts             ← AGP 8.9.2
 ├── settings.gradle.kts          ← 阿里云 Maven 镜像
 ├── gradle.properties
-└── local.properties             ← 本机 SDK 路径（已 gitignore）
+├── local.properties.example     ← SDK 路径模板（复制成 local.properties 再改路径）
+└── local.properties             ← 本机 SDK 路径（已 gitignore，不入库）
 ```
 
 ## 已知问题
