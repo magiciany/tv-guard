@@ -57,7 +57,7 @@
 
 ### 方式 A：U 盘（不用电脑）
 
-1. 把 `releases/tv-guard-v1.0-debug.apk` 拷到 FAT32 U 盘
+1. 把 `releases/tv-guard-v1.0-release.apk` 拷到 FAT32 U 盘
 2. U 盘插电视 → 用电视文件管理器打开 APK 安装（需在设置里允许「未知来源」）
 3. 打开 App → 点「无障碍服务：未开启」→ 在系统列表里打开「守护答题」
 4. 点「悬浮窗权限」→ 允许
@@ -74,7 +74,7 @@
 adb connect <电视IP>:5555
 
 # 安装
-adb install -r releases/tv-guard-v1.0-debug.apk
+adb install -r releases/tv-guard-v1.0-release.apk
 
 # 关键：授予写系统设置权限，守护才能自己修好被关掉的无障碍开关
 adb shell pm grant com.hermes.tvguard android.permission.WRITE_SECURE_SETTINGS
@@ -158,11 +158,16 @@ gradle assembleDebug
 手工完成整个构建，**不需要 Gradle，也不需要 Android Studio**：
 
 ```bash
+# release 包（分发用，manifest 不带 android:debuggable）
+./scripts/build-manual.sh --release
+# 产物：releases/tv-guard-v1.0-release.apk
+
+# debug 包（仅调试用，manifest 带 android:debuggable="true"）
 ./scripts/build-manual.sh
 # 产物：releases/tv-guard-v1.0-debug.apk
 ```
 
-> 注意：`releases/tv-guard-v1.0-debug.apk` 在仓库里已提交，重新构建会覆盖它（`git status` 会显示该项被修改）。
+> 注意：`releases/` 下的包在仓库里已提交，重新构建会覆盖同名文件（`git status` 会显示该项被修改）。
 > 只是本地试构建的话，构建完可以 `git checkout -- releases/` 还原。
 
 前置条件只有两样：**Android SDK**（`platforms/android-34` + 任意 `build-tools`）和 **JDK 17+**。
@@ -176,7 +181,8 @@ PLATFORM=android-35 ./scripts/build-manual.sh
 ./scripts/build-manual.sh --keep
 ```
 
-脚本产物与 AGP 构建产物**等价**：43 个类、资源 ID 表一致、同为 debug 证书签名，可互相覆盖安装。
+脚本产出的 release 包与 AGP 构建的产物**等价**：43 个类、资源 ID 表一致；两者签名相同（都是 debug keystore），
+可互相覆盖安装。唯一实质差别是 release 包不带 `android:debuggable` 标记。
 实测证据见 `docs/TESTING.md`。
 
 ### 构建注意事项
@@ -227,8 +233,7 @@ tv-guard/
 │   ├── TESTING.md               ← 实测记录与踩坑（含证据）
 │   └── screenshots/             ← 界面截图
 ├── releases/
-│   ├── tv-guard-v1.0-debug.apk       ← 当前可用包（脚本构建，57 KB）
-│   └── tv-guard-v1.0-debug-agp.apk   ← AGP/Gradle 构建的原始包（71 KB）
+│   └── tv-guard-v1.0-release.apk     ← 当前可用包（release 构建，58 KB，非调试）
 ├── build.gradle.kts             ← AGP 8.9.2
 ├── settings.gradle.kts          ← 阿里云 Maven 镜像
 ├── gradle.properties

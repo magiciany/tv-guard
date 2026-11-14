@@ -5,9 +5,15 @@
 # 的机器（本项目没有 gradle wrapper）。
 #
 # 用法：
-#   ./scripts/build-manual.sh              # 产物输出到 releases/
+#   ./scripts/build-manual.sh              # debug 包（manifest 带 android:debuggable）
+#   ./scripts/build-manual.sh --release    # release 包（不带 debug 标记，签名同工程配置）
 #   PLATFORM=android-35 ./scripts/build-manual.sh
 #   ./scripts/build-manual.sh --keep       # 保留中间产物便于排查
+#
+# 产物：releases/tv-guard-v<版本>-<debug|release>.apk
+#
+# 注意：本项目 build.gradle.kts 里 release 也复用 debug 签名（signingConfig = debug），
+# 所以 release 包同样是 debug keystore 签的，只能侧载、不能上架应用商店。
 #
 # 依赖：
 #   - Android SDK（platforms/android-34、build-tools/*、platform-tools）
@@ -18,7 +24,19 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 KEEP=0
-[ "${1:-}" = "--keep" ] && KEEP=1
+BUILD_TYPE=debug
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --keep) KEEP=1 ;;
+        --release) BUILD_TYPE=release ;;
+        --debug) BUILD_TYPE=debug ;;
+        -h|--help)
+            sed -n '3,20p' "$0" | sed 's/^# \{0,1\}//'
+            exit 0 ;;
+        *) echo "未知参数: $1（可用: --release / --keep / --help）" >&2; exit 2 ;;
+    esac
+    shift
+done
 
 # ---- 1. 定位 SDK -----------------------------------------------------------
 SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
@@ -51,6 +69,7 @@ echo "SDK        : $SDK"
 echo "build-tools: $BT"
 echo "platform   : $PLATFORM"
 echo "package    : $NAMESPACE  v$VERSION_NAME ($VERSION_CODE)  min$MIN_SDK target$TARGET_SDK"
+echo "build type : $BUILD_TYPE"
 
 # ---- 3. 准备临时工作目录 ---------------------------------------------------
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/tvguard-build.XXXXXX")
@@ -63,8 +82,12 @@ mkdir -p "$WORK/gen" "$WORK/classes" "$WORK/dex"
 # ---- 4. 资源编译 + 链接（生成 R.java） ------------------------------------
 # AGP 8 把包名放在 build.gradle.kts 的 namespace 里，manifest 中没有 package 属性；
 # aapt2 要求 manifest 里有 package，因此注入一份临时 manifest。
+# debug 构建额外写入 android:debuggable="true"，与 AGP debug 行为一致；release 不写。
 sed "s|<manifest \(.*\)>|<manifest \1 package=\"$NAMESPACE\">|" \
     "$MAIN/AndroidManifest.xml" > "$WORK/AndroidManifest.xml"
+if [ "$BUILD_TYPE" = "debug" ]; then
+    sed -i.bak 's|<application|<application android:debuggable="true"|' "$WORK/AndroidManifest.xml"
+fi
 
 "$BT/aapt2" compile --dir "$MAIN/res" -o "$WORK/res.zip"
 "$BT/aapt2" link \
@@ -105,7 +128,7 @@ fi
 
 OUT_DIR="$ROOT/releases"
 mkdir -p "$OUT_DIR"
-OUT="$OUT_DIR/tv-guard-v${VERSION_NAME}-debug.apk"
+OUT="$OUT_DIR/tv-guard-v${VERSION_NAME}-${BUILD_TYPE}.apk"
 "$BT/apksigner" sign --ks "$KS" --ks-pass pass:android --key-pass pass:android \
     --ks-key-alias androiddebugkey --out "$OUT" "$WORK/aligned.apk"
 
