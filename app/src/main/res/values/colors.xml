@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="guard_bg">#0E1216</color>
+    <color name="guard_card">#1B2530</color>
+    <color name="guard_card_focus">#2E73C9</color>
+    <color name="guard_accent">#5AA9FF</color>
+    <color name="guard_text">#FFFFFF</color>
+    <color name="guard_text_dim">#9FB0BF</color>
+    <color name="guard_ok">#4CD07D</color>
+    <color name="guard_danger">#FF6B6B</color>
+</resources>

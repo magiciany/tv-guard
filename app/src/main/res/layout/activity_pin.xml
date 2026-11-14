@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/guard_bg"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingLeft="180dp"
+    android:paddingTop="24dp"
+    android:paddingRight="180dp"
+    android:paddingBottom="24dp">
+
+    <TextView
+        android:id="@+id/pin_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="输入密码"
+        android:textColor="@color/guard_accent"
+        android:textSize="30sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/pin_tip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="请输入 4 位数字"
+        android:textColor="@color/guard_text"
+        android:textSize="20sp" />
+
+    <TextView
+        android:id="@+id/pin_dots"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:letterSpacing="0.25"
+        android:text="○ ○ ○ ○"
+        android:textColor="@color/guard_text"
+        android:textSize="40sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/k1"
+            style="@style/PinKey"
+            android:text="1" />
+
+        <Button
+            android:id="@+id/k2"
+            style="@style/PinKey"
+            android:text="2" />
+
+        <Button
+            android:id="@+id/k3"
+            style="@style/PinKey"
+            android:text="3" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/k4"
+            style="@style/PinKey"
+            android:text="4" />
+
+        <Button
+            android:id="@+id/k5"
+            style="@style/PinKey"
+            android:text="5" />
+
+        <Button
+            android:id="@+id/k6"
+            style="@style/PinKey"
+            android:text="6" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/k7"
+            style="@style/PinKey"
+            android:text="7" />
+
+        <Button
+            android:id="@+id/k8"
+            style="@style/PinKey"
+            android:text="8" />
+
+        <Button
+            android:id="@+id/k9"
+            style="@style/PinKey"
+            android:text="9" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/k_del"
+            style="@style/PinKey"
+            android:text="删除" />
+
+        <Button
+            android:id="@+id/k0"
+            style="@style/PinKey"
+            android:text="0" />
+
+        <Button
+            android:id="@+id/k_ok"
+            style="@style/PinKey"
+            android:text="确定" />
+    </LinearLayout>
+
+</LinearLayout>

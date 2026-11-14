@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">守护答题</string>
+    <string name="service_label">守护答题 · 前台监视</string>
+    <string name="accessibility_desc">用于检测「云视听小电视」是否在前台运行，并在设定时间弹出答题验证。本服务不读取、不上传任何屏幕内容。</string>
+
+    <string name="title">守护答题</string>
+    <string name="subtitle">目标 App 每 N 分钟需要答对一题才能继续使用</string>
+    <string name="label_target">目标 App</string>
+    <string name="label_type">题目类型</string>
+    <string name="label_interval">验证间隔</string>
+    <string name="label_lock">答错锁定</string>
+    <string name="label_diff">口算难度</string>
+    <string name="label_access">无障碍服务</string>
+    <string name="label_overlay">悬浮窗权限</string>
+    <string name="label_stats">统计</string>
+    <string name="label_pin">密码</string>
+    <string name="label_power">守护状态</string>
+    <string name="label_test">立即测试一次</string>
+    <string name="hint">用遥控器方向键选择，按「确定」进入。改完设置记得确认无障碍服务已开启。</string>
+
+    <string name="challenge_title">请完成验证</string>
+    <string name="challenge_sub">答对才能继续使用</string>
+    <string name="locked_title">答错了</string>
+    <string name="locked_sub">已锁定，请等待倒计时结束</string>
+    <string name="correct_toast">答对了，继续使用</string>
+    <string name="wrong_toast">答错，已锁定</string>
+    <string name="back_blocked">答对题目后才能返回</string>
+
+    <string name="picker_title">选择要守护的 App</string>
+    <string name="picker_hint">选择后返回即可，设置立即生效</string>
+
+    <string name="perm_on">已开启</string>
+    <string name="perm_off">未开启（点击前往设置）</string>
+</resources>

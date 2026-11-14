@@ -1,0 +1,19 @@
+# 构建产物
+.gradle/
+build/
+app/build/
+*.apk.idsig
+
+# 本机配置（含 SDK 绝对路径，不应提交）
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# macOS / 网络盘元数据
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
