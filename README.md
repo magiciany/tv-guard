@@ -162,6 +162,9 @@ gradle assembleDebug
 # 产物：releases/tv-guard-v1.0-debug.apk
 ```
 
+> 注意：`releases/tv-guard-v1.0-debug.apk` 在仓库里已提交，重新构建会覆盖它（`git status` 会显示该项被修改）。
+> 只是本地试构建的话，构建完可以 `git checkout -- releases/` 还原。
+
 前置条件只有两样：**Android SDK**（`platforms/android-34` + 任意 `build-tools`）和 **JDK 17+**。
 SDK 路径从 `$ANDROID_HOME` 读，读不到则读 `local.properties` 里的 `sdk.dir`。
 
