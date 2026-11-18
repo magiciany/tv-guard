@@ -103,7 +103,8 @@ fi
     --auto-add-overlay
 
 # ---- 5. javac 编译源码 -----------------------------------------------------
-find "$WORK/gen" "$MAIN/java" -name "*.java" > "$WORK/sources.txt"
+# NAS/SMB may contain macOS AppleDouble sidecars named ._*.java; they are not source.
+find "$WORK/gen" "$MAIN/java" -name "*.java" ! -name '._*' > "$WORK/sources.txt"
 javac --release 17 -encoding UTF-8 -Xlint:-options \
       -cp "$ANDROID_JAR" -d "$WORK/classes" @"$WORK/sources.txt"
 

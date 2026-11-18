@@ -12,7 +12,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
-import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -37,8 +36,11 @@ public class MainActivity extends Activity {
     private Button btnTest;
     private android.widget.TextView tvDiag;
 
-    private static final int REQ_EXIT = 11;
+    private static final int REQ_ACTION = 11;
     private static final int REQ_PIN = 12;
+    private enum Action { TYPE, INTERVAL, LOCK, DIFFICULTY, ACCESSIBILITY, OVERLAY, POWER, CLEAR_STATS }
+    // Deliberately not saved: process recreation/relaunch must never restore authorization.
+    private Action pendingAction;
 
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final Runnable diagTick = new Runnable() {
@@ -67,125 +69,29 @@ public class MainActivity extends Activity {
         btnTest = findViewById(R.id.btn_test);
         tvDiag = findViewById(R.id.tv_diag);
 
-        btnTarget.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, AppPickerActivity.class));
-            }
+        // The picker owns its own short-lived authentication; no transferable auth extra.
+        btnTarget.setOnClickListener(v ->
+                startActivity(new Intent(MainActivity.this, AppPickerActivity.class)));
+        btnType.setOnClickListener(v -> requireParent(Action.TYPE));
+        btnInterval.setOnClickListener(v -> requireParent(Action.INTERVAL));
+        btnLock.setOnClickListener(v -> requireParent(Action.LOCK));
+        btnDiff.setOnClickListener(v -> requireParent(Action.DIFFICULTY));
+        btnAccess.setOnClickListener(v -> requireParent(Action.ACCESSIBILITY));
+        btnOverlay.setOnClickListener(v -> requireParent(Action.OVERLAY));
+        btnStats.setOnClickListener(v -> showStats());
+        btnTest.setOnClickListener(v ->
+                startActivity(new Intent(MainActivity.this, TestChallengeActivity.class)));
+        btnPin.setOnClickListener(v -> {
+            int mode = PinStore.hasPin(this) ? PinActivity.MODE_CHANGE : PinActivity.MODE_SET;
+            startActivityForResult(new Intent(this, PinActivity.class)
+                    .putExtra(PinActivity.EXTRA_MODE, mode), REQ_PIN);
         });
-
-        btnType.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                int t = Prefs.getType(MainActivity.this) + 1;
-                if (t > 2) {
-                    t = 0;
-                }
-                Prefs.setType(MainActivity.this, t);
-                refresh();
+        btnPower.setOnClickListener(v -> {
+            if (Prefs.getEnabled(this) && !PinStore.hasPin(this)) {
+                Toast.makeText(this, "请先设置密码，再关闭守护", Toast.LENGTH_LONG).show();
+                return;
             }
-        });
-
-        btnInterval.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Prefs.setIntervalMin(MainActivity.this,
-                        next(INTERVALS, Prefs.getIntervalMin(MainActivity.this)));
-                refresh();
-            }
-        });
-
-        btnLock.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Prefs.setLockMin(MainActivity.this,
-                        next(LOCKS, Prefs.getLockMin(MainActivity.this)));
-                refresh();
-            }
-        });
-
-        btnDiff.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                int d = Prefs.getDifficulty(MainActivity.this) + 1;
-                if (d > 3) {
-                    d = 1;
-                }
-                Prefs.setDifficulty(MainActivity.this, d);
-                refresh();
-            }
-        });
-
-        btnAccess.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
-                } catch (Exception ignored) {
-                }
-            }
-        });
-
-        btnOverlay.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    try {
-                        Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                Uri.parse("package:" + getPackageName()));
-                        startActivity(i);
-                    } catch (Exception ignored) {
-                    }
-                }
-            }
-        });
-
-        btnStats.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showStats();
-            }
-        });
-
-        btnTest.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent i = new Intent(MainActivity.this, ChallengeActivity.class);
-                i.putExtra("test", true);
-                startActivity(i);
-            }
-        });
-
-        btnPin.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                int mode = PinStore.hasPin(MainActivity.this)
-                        ? PinActivity.MODE_CHANGE : PinActivity.MODE_SET;
-                Intent i = new Intent(MainActivity.this, PinActivity.class);
-                i.putExtra(PinActivity.EXTRA_MODE, mode);
-                startActivityForResult(i, REQ_PIN);
-            }
-        });
-
-        btnPower.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (!Prefs.getEnabled(MainActivity.this)) {
-                    GuardService.startGuard(MainActivity.this);
-                    refresh();
-                    Toast.makeText(MainActivity.this, "已重新启用守护",
-                            Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                if (!PinStore.hasPin(MainActivity.this)) {
-                    Toast.makeText(MainActivity.this, "请先设置密码，再关闭守护",
-                            Toast.LENGTH_LONG).show();
-                    return;
-                }
-                Intent i = new Intent(MainActivity.this, PinActivity.class);
-                i.putExtra(PinActivity.EXTRA_MODE, PinActivity.MODE_VERIFY);
-                startActivityForResult(i, REQ_EXIT);
-            }
+            requireParent(Action.POWER);
         });
 
         btnTarget.requestFocus();
@@ -194,6 +100,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        GuardService service = GuardService.INSTANCE;
+        if (service != null) service.pauseForSettings();
         refresh();
         ui.removeCallbacks(diagTick);
         ui.post(diagTick);
@@ -208,9 +116,64 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
-        if (req == REQ_EXIT && res == RESULT_OK) {
-            GuardService.stopGuard(this);
-            Toast.makeText(this, "已退出守护（无障碍已关闭）", Toast.LENGTH_LONG).show();
+        if (req == REQ_ACTION) {
+            Action action = pendingAction;
+            pendingAction = null; // One result authorizes one action, never a settings session.
+            if (res == RESULT_OK && action != null) perform(action);
+        }
+        refresh();
+    }
+
+    private void requireParent(Action action) {
+        if (pendingAction != null) return;
+        if (!PinStore.hasPin(this)) {
+            perform(action); // Preserve initial setup before a parent PIN exists.
+            return;
+        }
+        pendingAction = action;
+        startActivityForResult(new Intent(this, PinActivity.class)
+                .putExtra(PinActivity.EXTRA_MODE, PinActivity.MODE_VERIFY), REQ_ACTION);
+    }
+
+    private void perform(Action action) {
+        switch (action) {
+            case TYPE:
+                Prefs.setType(this, (Prefs.getType(this) + 1) % 3);
+                break;
+            case INTERVAL:
+                Prefs.setIntervalMin(this, next(INTERVALS, Prefs.getIntervalMin(this)));
+                break;
+            case LOCK:
+                Prefs.setLockMin(this, next(LOCKS, Prefs.getLockMin(this)));
+                break;
+            case DIFFICULTY:
+                Prefs.setDifficulty(this, Prefs.getDifficulty(this) % 3 + 1);
+                break;
+            case ACCESSIBILITY:
+                try {
+                    startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                } catch (Exception ignored) { }
+                break;
+            case OVERLAY:
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    try {
+                        startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                Uri.parse("package:" + getPackageName())));
+                    } catch (Exception ignored) { }
+                }
+                break;
+            case POWER:
+                if (Prefs.getEnabled(this)) {
+                    GuardService.stopGuard(this);
+                    Toast.makeText(this, "已退出守护（无障碍已关闭）", Toast.LENGTH_LONG).show();
+                } else {
+                    GuardService.startGuard(this);
+                    Toast.makeText(this, "已重新启用守护", Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case CLEAR_STATS:
+                Prefs.resetStats(this);
+                break;
         }
         refresh();
     }
@@ -336,8 +299,7 @@ public class MainActivity extends Activity {
                 .setNeutralButton("清零", new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface d, int w) {
-                        Prefs.resetStats(MainActivity.this);
-                        refresh();
+                        requireParent(Action.CLEAR_STATS);
                     }
                 })
                 .show();

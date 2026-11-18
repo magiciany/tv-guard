@@ -22,7 +22,6 @@ public class PinActivity extends Activity {
     public static final int MODE_CHANGE = 2;
 
     private static final int LEN = 4;
-    private static final int MAX_FAILS = 5;
 
     private int mode = MODE_VERIFY;
     /** 多步流程的当前步骤。 */
@@ -30,7 +29,7 @@ public class PinActivity extends Activity {
     private String input = "";
     /** 第一次输入的新密码，用于二次确认。 */
     private String first = "";
-    private int fails = 0;
+    private String oldPin = "";
 
     private TextView tvTitle;
     private TextView tvTip;
@@ -40,6 +39,8 @@ public class PinActivity extends Activity {
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
         mode = getIntent().getIntExtra(EXTRA_MODE, MODE_VERIFY);
+        if (mode != MODE_SET && mode != MODE_CHANGE) mode = MODE_VERIFY;
+        if (mode == MODE_SET && PinStore.hasPin(this)) mode = MODE_CHANGE;
         if (mode == MODE_CHANGE && !PinStore.hasPin(this)) {
             mode = MODE_SET;
         }
@@ -81,7 +82,34 @@ public class PinActivity extends Activity {
         findViewById(R.id.k5).requestFocus();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        GuardService service = GuardService.INSTANCE;
+        if (service != null) service.pauseForSettings();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Never retain a verified-old-PIN step after Home, task switching or recreation.
+        step = 0;
+        input = "";
+        first = "";
+        oldPin = "";
+        updateUi();
+    }
+
+    private boolean coolingDown() {
+        long left = PinStore.cooldownRemainingMs(this);
+        if (left <= 0L) return false;
+        Toast.makeText(this, "尝试次数过多，请 " + ((left + 999L) / 1000L)
+                + " 秒后重试", Toast.LENGTH_LONG).show();
+        return true;
+    }
+
     private void onDigit(String d) {
+        if (coolingDown()) return;
         if (input.length() >= LEN) {
             return;
         }
@@ -105,8 +133,8 @@ public class PinActivity extends Activity {
 
     private void updateUi() {
         if (mode == MODE_VERIFY) {
-            tvTitle.setText("退出守护");
-            tvTip.setText("请输入密码后再退出");
+            tvTitle.setText("家长验证");
+            tvTip.setText("请输入家长密码以继续");
         } else if (mode == MODE_SET) {
             tvTitle.setText("设置密码");
             tvTip.setText(step == 0 ? "请设置 4 位数字密码" : "请再次输入以确认");
@@ -124,6 +152,7 @@ public class PinActivity extends Activity {
     }
 
     private void submit() {
+        if (coolingDown()) return;
         if (input.length() != LEN) {
             Toast.makeText(this, "请输入 4 位数字", Toast.LENGTH_SHORT).show();
             return;
@@ -144,7 +173,11 @@ public class PinActivity extends Activity {
                 step = 1;
                 updateUi();
             } else if (input.equals(first)) {
-                PinStore.setPin(this, input);
+                if (!PinStore.setPin(this, input)) {
+                    Toast.makeText(this, "密码保存失败，请重新验证", Toast.LENGTH_LONG).show();
+                    finish();
+                    return;
+                }
                 Toast.makeText(this, "密码已设置", Toast.LENGTH_SHORT).show();
                 setResult(RESULT_OK);
                 finish();
@@ -160,6 +193,7 @@ public class PinActivity extends Activity {
         // MODE_CHANGE
         if (step == 0) {
             if (PinStore.check(this, input)) {
+                oldPin = input;
                 input = "";
                 step = 1;
                 updateUi();
@@ -172,7 +206,11 @@ public class PinActivity extends Activity {
             step = 2;
             updateUi();
         } else if (input.equals(first)) {
-            PinStore.setPin(this, input);
+            if (!PinStore.changePin(this, oldPin, input)) {
+                Toast.makeText(this, "密码保存失败，请重新验证", Toast.LENGTH_LONG).show();
+                finish();
+                return;
+            }
             Toast.makeText(this, "密码已修改", Toast.LENGTH_SHORT).show();
             setResult(RESULT_OK);
             finish();
@@ -186,16 +224,10 @@ public class PinActivity extends Activity {
     }
 
     private void fail() {
-        fails++;
         input = "";
         render();
-        if (fails >= MAX_FAILS) {
-            Toast.makeText(this, "密码错误次数过多，已退出", Toast.LENGTH_LONG).show();
-            setResult(RESULT_CANCELED);
-            finish();
-            return;
-        }
-        Toast.makeText(this, "密码错误，还可尝试 " + (MAX_FAILS - fails) + " 次",
+        if (coolingDown()) return;
+        Toast.makeText(this, "密码错误，还可尝试 " + PinStore.attemptsRemaining(this) + " 次",
                 Toast.LENGTH_SHORT).show();
     }
 }

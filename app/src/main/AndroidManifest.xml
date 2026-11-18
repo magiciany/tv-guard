@@ -58,6 +58,12 @@
             android:theme="@style/ChallengeTheme" />
 
         <activity
+            android:name=".TestChallengeActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@style/ChallengeTheme" />
+
+        <activity
             android:name=".PinActivity"
             android:excludeFromRecents="true"
             android:exported="false"

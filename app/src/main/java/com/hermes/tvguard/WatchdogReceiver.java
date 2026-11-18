@@ -26,10 +26,12 @@ public class WatchdogReceiver extends BroadcastReceiver {
             return;
         }
         if (!alive) {
-            // 设置是开的但服务没活：清空再写回，逼系统重新绑定
-            GuardService.setAccessibilitySetting(context, false);
-            GuardService.setAccessibilitySetting(context, true);
-            Log.i(GuardService.TAG, "watchdog: service dead -> force rebind");
+            // Toggle only our component; never clear unrelated services.
+            boolean removed = GuardService.setAccessibilitySetting(context, false);
+            // Restore even after a partial failed removal (putString may have succeeded).
+            boolean restored = GuardService.setAccessibilitySetting(context, true);
+            Log.i(GuardService.TAG, "watchdog: service dead -> rebind remove=" + removed
+                    + ", restore=" + restored);
         }
     }
 }

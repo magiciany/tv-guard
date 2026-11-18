@@ -29,7 +29,6 @@ public class ChallengeActivity extends Activity {
     private final Button[] opts = new Button[4];
 
     private Questions.Q question;
-    private boolean testMode = false;
     private boolean lockedView = false;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -59,9 +58,6 @@ public class ChallengeActivity extends Activity {
         opts[2] = findViewById(R.id.opt2);
         opts[3] = findViewById(R.id.opt3);
 
-        Intent in = getIntent();
-        testMode = in != null && in.getBooleanExtra("test", false);
-
         for (int i = 0; i < 4; i++) {
             final int idx = i;
             opts[i].setOnClickListener(new View.OnClickListener() {
@@ -78,6 +74,17 @@ public class ChallengeActivity extends Activity {
         } else {
             showQuestion();
         }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        // This component is exclusively real enforcement. Test intents cannot change its mode.
+        GuardService service = GuardService.INSTANCE;
+        if (service != null && service.getState() == GuardService.STATE_LOCKED) showLocked();
+        else if (lockedView) showQuestion();
+        step();
     }
 
     @Override
@@ -104,13 +111,11 @@ public class ChallengeActivity extends Activity {
 
     private void step() {
         GuardService s = GuardService.INSTANCE;
-        if (s == null) {
-            if (!testMode) {
-                finish();
-            }
+        if (s == null || s.getState() == GuardService.STATE_MONITORING) {
+            finish();
             return;
         }
-        if (!testMode && !s.isTargetForeground()) {
+        if (!s.isTargetForeground()) {
             Log.i(TAG, "target not foreground, dismiss challenge");
             finish();
             return;
@@ -192,6 +197,15 @@ public class ChallengeActivity extends Activity {
             return;
         }
         GuardService s = GuardService.INSTANCE;
+        if (s == null || !s.isTargetForeground()
+                || s.getState() == GuardService.STATE_MONITORING) {
+            finish();
+            return;
+        }
+        if (s.getState() == GuardService.STATE_LOCKED) {
+            showLocked();
+            return;
+        }
         if (idx == question.answer) {
             Toast.makeText(this, R.string.correct_toast, Toast.LENGTH_SHORT).show();
             if (s != null) {

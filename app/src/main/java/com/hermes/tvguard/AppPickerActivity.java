@@ -19,6 +19,46 @@ import java.util.Set;
 
 /** 从已安装的可启动 App 中选择目标。 */
 public class AppPickerActivity extends Activity {
+    private static final int REQ_PARENT = 21;
+    private boolean authenticated;
+    private boolean waitingForPin;
+    private ListView apps;
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        GuardService service = GuardService.INSTANCE;
+        if (service != null) service.pauseForSettings();
+        if (isFinishing()) return;
+        if (!PinStore.hasPin(this)) authenticated = true;
+        apps.setVisibility(authenticated ? View.VISIBLE : View.INVISIBLE);
+        apps.setEnabled(authenticated);
+        if (!authenticated && !waitingForPin) {
+            waitingForPin = true;
+            startActivityForResult(new Intent(this, PinActivity.class)
+                    .putExtra(PinActivity.EXTRA_MODE, PinActivity.MODE_VERIFY), REQ_PARENT);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Auth lasts only until this picker leaves the foreground; never save it in a Bundle.
+        authenticated = false;
+        apps.setEnabled(false);
+        apps.setVisibility(View.INVISIBLE);
+    }
+
+    @Override
+    protected void onActivityResult(int request, int result, Intent data) {
+        super.onActivityResult(request, result, data);
+        if (request == REQ_PARENT) {
+            boolean expected = waitingForPin;
+            waitingForPin = false;
+            if (!expected || result != RESULT_OK) { finish(); return; }
+            authenticated = true;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,10 +111,15 @@ public class AppPickerActivity extends Activity {
         }
 
         ListView lv = findViewById(R.id.list_apps);
+        apps = lv;
+        apps.setEnabled(false);
+        apps.setVisibility(View.INVISIBLE);
         lv.setAdapter(new ArrayAdapter<>(this, R.layout.item_app, labels));
         lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                if (!authenticated) return;
+                authenticated = false; // Consume authorization with this selection.
                 Prefs.setTarget(AppPickerActivity.this, pkgs.get(position));
                 finish();
             }
